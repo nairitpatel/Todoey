@@ -12,32 +12,20 @@ class TodoListViewController: UITableViewController {
     
     var itemArray = [items]()
     
-    
-    let defaults = UserDefaults.standard
+   let dataFileType = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Append items to address")
     
     override func viewDidLoad() {
        super.viewDidLoad()
         
-        let myItem = items()
-        myItem.title = "Madara"
-        itemArray.append(myItem)
+        loadItems()
         
+       
         
-        let myItem2 = items()
-        myItem2.title = "Goku"
-        itemArray.append(myItem2)
-        
-        
-        let myItem3 = items()
-        myItem3.title = "Vegeta"
-        itemArray.append(myItem3)
-        
-        
-        if let retrievingitem = defaults.array(forKey: "TodoArray") as? [items] {
+      //  if let retrievingitem = defaults.array(forKey: "TodoArray") as? [items] {
             
-           itemArray = retrievingitem
+       //    itemArray = retrievingitem
             
-        }
+        
     }
     
 override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -78,6 +66,8 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
         itemArray[indexPath.row].done = false
     }
     
+    SaveItems()
+    
   //  if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
         
   //      tableView.cellForRow(at: indexPath)?.accessoryType = .none
@@ -87,11 +77,7 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
   //     tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
   //  }
     
-    tableView.reloadData()
-        
    tableView.deselectRow(at: indexPath, animated: true)
-    
-   
     
     }
 
@@ -109,9 +95,7 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
             
             self.itemArray.append(allItem)
             
-            self.defaults.set(self.itemArray, forKey: "TodoArray")
-            
-            self.tableView.reloadData()
+         self.SaveItems()
             
         }
         
@@ -126,6 +110,44 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
         
         
         present(alert, animated: true, completion: nil)
+        
+    }
+    
+    func SaveItems () {
+        
+        let encoder = PropertyListEncoder()
+        
+        do {
+            
+            let data = try encoder.encode(itemArray)
+            
+            try data.write(to: dataFileType!)
+            
+        } catch {
+            
+            print("Error in encoding data to plist")
+        }
+        
+        self.tableView.reloadData()
+        
+        
+    }
+    
+    func loadItems () {
+        
+        if let data = try? Data(contentsOf: dataFileType!) {
+            
+            let decoder = PropertyListDecoder()
+        
+        do {
+            itemArray = try decoder.decode([items].self, from: data)
+        } catch {
+            
+            print("Error decoding !")
+            
+        }
+            
+        }
         
     }
     
