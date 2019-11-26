@@ -7,31 +7,39 @@
 //
 
 import UIKit
+import CoreData
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: UITableViewController  {
     
-    var itemArray = [items]()
+    var itemArray = [Item]()
     
-   let dataFileType = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Append items to address")
+    var selectedCategory : Category?
+    {
+        
+        didSet{
+            
+            loadData()
+            
+        }
+        
+    }
     
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+
     override func viewDidLoad() {
        super.viewDidLoad()
         
-        loadItems()
+        print (FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
+        loadData()
        
-        
-      //  if let retrievingitem = defaults.array(forKey: "TodoArray") as? [items] {
-            
-       //    itemArray = retrievingitem
-            
-        
-    }
+     }
     
 override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
         return itemArray.count
-        
+    
+    
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -54,30 +62,18 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
     
   override  func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     
-    print(itemArray[indexPath.row])
-    
-    
     if itemArray[indexPath.row].done == false {
         
         itemArray[indexPath.row].done = true
         
-    }else {
+   }else {
         
-        itemArray[indexPath.row].done = false
-    }
+       itemArray[indexPath.row].done = false
+   }
     
     SaveItems()
     
-  //  if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-        
-  //      tableView.cellForRow(at: indexPath)?.accessoryType = .none
-    
-  //  }else {
-  
-  //     tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-  //  }
-    
-   tableView.deselectRow(at: indexPath, animated: true)
+    tableView.deselectRow(at: indexPath, animated: true)
     
     }
 
@@ -88,10 +84,12 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
         let alert = UIAlertController(title: "Add New Item", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            
-            let allItem = items()
+           
+            let allItem = Item(context: self.context)
             
             allItem.title = textField.text!
+            
+            allItem.done = false
             
             self.itemArray.append(allItem)
             
@@ -115,39 +113,69 @@ override func tableView(_ tableView: UITableView, numberOfRowsInSection section:
     
     func SaveItems () {
         
-        let encoder = PropertyListEncoder()
+       do {
         
-        do {
-            
-            let data = try encoder.encode(itemArray)
-            
-            try data.write(to: dataFileType!)
-            
+            try context.save()
+        
         } catch {
             
-            print("Error in encoding data to plist")
+            print("Error")
         }
         
         self.tableView.reloadData()
         
+    }
+    
+    func loadData (with request : NSFetchRequest<Item> = Item.fetchRequest()) {
+        
+     
+        do {
+            
+           itemArray = try context.fetch(request)
+            
+        } catch {
+            
+            print("Error in fetching data")
+            
+        }
+    }
+    
+}
+
+extension TodoListViewController : UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        let predicate = NSPredicate(format: "title CONTAINS[cd] '%@'", searchBar.text!)
+        
+         request.predicate = predicate
+        
+        let setDescriptor = NSSortDescriptor(key: "Title", ascending: true)
+        
+        request.sortDescriptors = [setDescriptor]
+        
+        loadData(with: request)
+        
         
     }
     
-    func loadItems () {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         
-        if let data = try? Data(contentsOf: dataFileType!) {
+        if searchBar.text?.count == 0 {
             
-            let decoder = PropertyListDecoder()
-        
-        do {
-            itemArray = try decoder.decode([items].self, from: data)
-        } catch {
+            loadData()
             
-            print("Error decoding !")
+              tableView.reloadData()
             
-        }
+            DispatchQueue.main.async {
+                
+                searchBar.resignFirstResponder()
+                
+            }
             
-        }
+        } 
         
     }
     
