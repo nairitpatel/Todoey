@@ -7,17 +7,15 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
     
-    var categoryArray = [Category]()
+    let realm = try! Realm()
+    
+    var categoryArray: Results<Category>?
     
   
-    
-     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -30,7 +28,7 @@ class CategoryViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return categoryArray.count
+        return categoryArray?.count ?? 1
         
     }
     
@@ -38,7 +36,7 @@ class CategoryViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Categories Added Yet"
         
         return cell
         
@@ -56,7 +54,7 @@ class CategoryViewController: UITableViewController {
             
         if let indexpath = tableView.indexPathForSelectedRow {
             
-            destinationVC.selectedCategory = categoryArray[indexpath.row]
+            destinationVC.selectedCategory = categoryArray?[indexpath.row]
             
         }
         
@@ -70,13 +68,11 @@ class CategoryViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             
-            let allCategory = Category(context: self.context)
+            let allCategory = Category()
             
             allCategory.name = textField.text!
             
-            self.categoryArray.append(allCategory)
-            
-          self.SaveItems()
+          self.Save(category: allCategory)
     }
         alert.addTextField { (alertTextField) in
             
@@ -85,18 +81,17 @@ class CategoryViewController: UITableViewController {
             textField = alertTextField
         }
        
-        
         alert.addAction(action)
         
-        
-        present(alert, animated: true, completion: nil)
+       present(alert, animated: true, completion: nil)
         
 }
-    func SaveItems () {
+    func Save (category : Category) {
         
         do {
-            
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
             
         } catch {
             
@@ -107,17 +102,9 @@ class CategoryViewController: UITableViewController {
         
     }
     
-    func loadCategory (with request : NSFetchRequest<Category> = Category.fetchRequest()) {
+    func loadCategory () {
         
-        do {
-            
-            categoryArray = try context.fetch(request)
-            
-        } catch {
-            
-            print("Error in fetching data")
-            
-        }
+        categoryArray = realm.objects(Category.self)
         
         tableView.reloadData()
     }
@@ -128,18 +115,7 @@ extension CategoryViewController : UISearchBarDelegate {
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
-        let request : NSFetchRequest<Category> = Category.fetchRequest()
-        
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        
-        request.predicate = predicate
-        
-        let setDescriptor = NSSortDescriptor(key: "Title", ascending: true)
-        
-        request.sortDescriptors = [setDescriptor]
-        
-        loadCategory(with: request as! NSFetchRequest<Item> as! NSFetchRequest<Category>)
-        
+      
         
     }
     
